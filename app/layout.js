@@ -1,5 +1,7 @@
 import './globals.css';
 
+// No-op change to trigger CI/CD pipeline when committed.
+
 export const metadata = {
   title: 'Leo by Pyrecrest — Shortlet Apartment in Somolu, Lagos',
   description: 'A stylish 1-bedroom apartment in the heart of Somolu, Lagos — perfect for short stays, business trips, and getaways. Book online with instant confirmation.',
