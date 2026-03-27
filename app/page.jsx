@@ -415,7 +415,13 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
       checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
       nights, totalAmount: total,
     };
-    onBookingConfirmed(fmt(checkIn), fmt(checkOut), ref);
+    const result = await onBookingConfirmed(fmt(checkIn), fmt(checkOut), ref);
+    if (result && result.error) {
+      setError(result.error);
+      setProcessing(false);
+      setStep(1); setCheckIn(null); setCheckOut(null);
+      return;
+    }
     await sendBookingEmail(data);
     await sendCustomerEmail(data);
     setProcessing(false);
@@ -616,15 +622,42 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [confirmation, setConfirmation] = useState(null);
 
-  function handleBookingConfirmed(checkInDate, checkOutDate, ref) {
+  // Fetch bookings from server on mount and poll every 30s to stay in sync
+  useEffect(() => {
+    function fetchBookings() {
+      fetch("/api/bookings").then(r => r.json()).then(setBookings).catch(() => {});
+    }
+    fetchBookings();
+    const interval = setInterval(fetchBookings, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function handleBookingConfirmed(checkInDate, checkOutDate, ref) {
+    // Save to server first, then update local state
+    const res = await fetch("/api/bookings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ start: checkInDate, end: checkOutDate, ref }),
+    });
+    if (!res.ok) {
+      // Dates were taken by another user — refresh bookings
+      const fresh = await fetch("/api/bookings").then(r => r.json());
+      setBookings(fresh);
+      return { error: "These dates were just booked by someone else. Please choose different dates." };
+    }
     setBookings(prev => [...prev, { start: checkInDate, end: checkOutDate, ref, pending: true }]);
+    return { ok: true };
   }
 
-  function handleBookingCancelled(ref) {
+  async function handleBookingCancelled(ref) {
+    await fetch(`/api/bookings?ref=${ref}`, { method: "DELETE" }).catch(() => {});
     setBookings(prev => prev.filter(b => b.ref !== ref));
   }
 
-  function handleBookingComplete(booking) {
+  async function handleBookingComplete(booking) {
+    await fetch("/api/bookings", {
+      method: "PATCH", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: booking.reference, pending: false }),
+    }).catch(() => {});
     setBookings(prev => prev.map(b => b.ref === booking.reference ? { ...b, pending: false } : b));
     setConfirmation(booking);
   }
