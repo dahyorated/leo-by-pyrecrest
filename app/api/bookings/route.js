@@ -1,45 +1,30 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { Redis } from "@upstash/redis";
 
-const DATA_FILE = path.join(process.cwd(), "data", "bookings.json");
+const redis = Redis.fromEnv();
+const BOOKINGS_KEY = "bookings";
+const TIMEOUT = 20 * 60 * 1000; // 20 minutes
 
-function ensureDataDir() {
-  const dir = path.dirname(DATA_FILE);
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, "[]", "utf-8");
-}
-
-function readBookings() {
-  ensureDataDir();
-  try {
-    const raw = fs.readFileSync(DATA_FILE, "utf-8");
-    const bookings = JSON.parse(raw);
-    // Auto-expire pending bookings older than 20 minutes
-    const now = Date.now();
-    const TIMEOUT = 20 * 60 * 1000;
-    const active = bookings.filter(
-      (b) => !b.pending || now - b.createdAt < TIMEOUT
-    );
-    // Write back if any were removed
-    if (active.length !== bookings.length) {
-      fs.writeFileSync(DATA_FILE, JSON.stringify(active, null, 2), "utf-8");
-    }
-    return active;
-  } catch {
-    return [];
+async function readBookings() {
+  const bookings = (await redis.get(BOOKINGS_KEY)) || [];
+  // Auto-expire pending bookings older than 20 minutes
+  const now = Date.now();
+  const active = bookings.filter(
+    (b) => !b.pending || now - b.createdAt < TIMEOUT
+  );
+  if (active.length !== bookings.length) {
+    await redis.set(BOOKINGS_KEY, active);
   }
+  return active;
 }
 
-function writeBookings(bookings) {
-  ensureDataDir();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2), "utf-8");
+async function writeBookings(bookings) {
+  await redis.set(BOOKINGS_KEY, bookings);
 }
 
 // GET - fetch all active bookings
 export async function GET() {
-  const bookings = readBookings();
-  // Only return fields needed by the calendar (don't expose guest details)
+  const bookings = await readBookings();
   const safe = bookings.map((b) => ({
     start: b.start,
     end: b.end,
@@ -58,7 +43,7 @@ export async function POST(request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const bookings = readBookings();
+  const bookings = await readBookings();
 
   // Check for overlap with existing bookings
   const overlaps = bookings.some((b) => b.start <= end && b.end >= start);
@@ -70,7 +55,7 @@ export async function POST(request) {
   }
 
   bookings.push({ start, end, ref, pending: true, createdAt: Date.now() });
-  writeBookings(bookings);
+  await writeBookings(bookings);
 
   return NextResponse.json({ ok: true });
 }
@@ -84,14 +69,14 @@ export async function PATCH(request) {
     return NextResponse.json({ error: "Missing ref" }, { status: 400 });
   }
 
-  const bookings = readBookings();
+  const bookings = await readBookings();
   const idx = bookings.findIndex((b) => b.ref === ref);
   if (idx === -1) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
   }
 
   if (typeof pending === "boolean") bookings[idx].pending = pending;
-  writeBookings(bookings);
+  await writeBookings(bookings);
 
   return NextResponse.json({ ok: true });
 }
@@ -105,9 +90,9 @@ export async function DELETE(request) {
     return NextResponse.json({ error: "Missing ref" }, { status: 400 });
   }
 
-  const bookings = readBookings();
+  const bookings = await readBookings();
   const filtered = bookings.filter((b) => b.ref !== ref);
-  writeBookings(filtered);
+  await writeBookings(filtered);
 
   return NextResponse.json({ ok: true });
 }
