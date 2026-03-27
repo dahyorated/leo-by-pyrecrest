@@ -23,9 +23,11 @@ const CONFIG = {
   emailjs: {
     serviceId: "service_sm0402u",
     templateId: "template_bpowk6x",
+    customerTemplateId: "template_ri54zjb",
     publicKey: "spaPwEbKkXXRcHgvN",
   },
   whatsapp: "+2348000000000",
+  paymentUrl: "https://yourdomain.com",
 };
 
 // Replace with your actual apartment photos
@@ -124,6 +126,25 @@ async function sendBookingEmail(booking) {
     });
     return res.ok;
   } catch (e) { console.error("Email failed:", e); return false; }
+}
+
+async function sendCustomerEmail(booking) {
+  try {
+    const params = {
+      guest_name: booking.name, guest_email: booking.email, guest_phone: booking.phone,
+      check_in: booking.checkIn, check_out: booking.checkOut, nights: booking.nights,
+      total: booking.totalAmount, reference: booking.reference, to_email: booking.email,
+      payment_url: CONFIG.paymentUrl,
+    };
+    const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        service_id: CONFIG.emailjs.serviceId, template_id: CONFIG.emailjs.customerTemplateId,
+        user_id: CONFIG.emailjs.publicKey, template_params: params,
+      }),
+    });
+    return res.ok;
+  } catch (e) { console.error("Customer email failed:", e); return false; }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -291,7 +312,7 @@ function ConfirmationModal({ booking, onClose }) {
           <Icon name="confetti" size={32}/></div>
         <h2 style={{ fontSize: 24, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 8 }}>Booking confirmed!</h2>
         <p style={{ fontSize: 14, color: "#888", marginBottom: 24, lineHeight: 1.6 }}>
-          A confirmation email has been sent to <strong style={{ color: "#555" }}>{booking.email}</strong>
+          Payment received! A confirmation has been sent to <strong style={{ color: "#555" }}>{booking.email}</strong>
         </p>
         <div style={{ background: "#FAFAF8", borderRadius: 14, padding: "18px 20px", textAlign: "left", marginBottom: 24 }}>
           {[["Reference", booking.reference], ["Guest", booking.name], ["Check-in", booking.checkIn],
@@ -318,7 +339,7 @@ function ConfirmationModal({ booking, onClose }) {
 // ═══════════════════════════════════════════════════════════════
 // BOOKING PANEL
 // ═══════════════════════════════════════════════════════════════
-function BookingPanel({ bookings, onBookingComplete }) {
+function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBookingCancelled }) {
   const [checkIn, setCheckIn] = useState(null);
   const [checkOut, setCheckOut] = useState(null);
   const [selecting, setSelecting] = useState("checkin");
@@ -326,6 +347,10 @@ function BookingPanel({ bookings, onBookingComplete }) {
   const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
   const [step, setStep] = useState(1);
+  const [bookingRef, setBookingRef] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const cancelTimerRef = useRef(null);
+  const countdownRef = useRef(null);
 
   function handleSelect(date) {
     setError("");
@@ -352,25 +377,71 @@ function BookingPanel({ bookings, onBookingComplete }) {
     setError(""); setStep(3);
   }
 
-  function handlePay() {
+  function clearTimers() {
+    if (cancelTimerRef.current) { clearTimeout(cancelTimerRef.current); cancelTimerRef.current = null; }
+    if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+    setCountdown(0);
+  }
+
+  function startCancelTimer(ref) {
+    const TIMEOUT_MS = 20 * 60 * 1000;
+    setCountdown(20 * 60);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) { clearInterval(countdownRef.current); countdownRef.current = null; return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+    cancelTimerRef.current = setTimeout(() => {
+      clearTimers();
+      onBookingCancelled(ref);
+      setCheckIn(null); setCheckOut(null); setGuest({ name: "", email: "", phone: "", guests: 1 });
+      setStep(1); setBookingRef("");
+      setError("Your booking was automatically cancelled because payment was not received within 20 minutes.");
+    }, TIMEOUT_MS);
+  }
+
+  useEffect(() => {
+    return () => clearTimers();
+  }, []);
+
+  async function handleConfirm() {
     setError(""); setProcessing(true);
     const ref = `LEO-${Date.now().toString(36).toUpperCase()}`;
+    setBookingRef(ref);
+    const data = {
+      reference: ref, name: guest.name, email: guest.email, phone: guest.phone,
+      checkIn: fmtDisplay(checkIn), checkOut: fmtDisplay(checkOut),
+      checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
+      nights, totalAmount: total,
+    };
+    onBookingConfirmed(fmt(checkIn), fmt(checkOut), ref);
+    await sendBookingEmail(data);
+    await sendCustomerEmail(data);
+    setProcessing(false);
+    setStep(4);
+    startCancelTimer(ref);
+  }
+
+  function handlePay() {
+    setError(""); setProcessing(true);
     const complete = (txId) => {
+      clearTimers();
       const data = {
-        reference: ref, name: guest.name, email: guest.email, phone: guest.phone,
+        reference: bookingRef, name: guest.name, email: guest.email, phone: guest.phone,
         checkIn: fmtDisplay(checkIn), checkOut: fmtDisplay(checkOut),
         checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
         nights, totalAmount: total, transactionId: txId,
       };
-      sendBookingEmail(data);
       onBookingComplete(data);
       setCheckIn(null); setCheckOut(null); setGuest({ name: "", email: "", phone: "", guests: 1 }); setStep(1);
+      setBookingRef("");
       setProcessing(false);
     };
 
     if (typeof window !== "undefined" && window.FlutterwaveCheckout) {
       window.FlutterwaveCheckout({
-        public_key: CONFIG.flutterwaveKey, tx_ref: ref, amount: total, currency: "NGN",
+        public_key: CONFIG.flutterwaveKey, tx_ref: bookingRef, amount: total, currency: "NGN",
         payment_options: "card,banktransfer,ussd",
         customer: { email: guest.email, phone_number: guest.phone, name: guest.name },
         customizations: { title: CONFIG.name, description: `${nights} night${nights>1?"s":""} — ${fmtDisplay(checkIn)} to ${fmtDisplay(checkOut)}` },
@@ -395,7 +466,7 @@ function BookingPanel({ bookings, onBookingComplete }) {
 
       {/* Step bar */}
       <div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
-        {["Dates","Details","Review"].map((l,i) => (
+        {["Dates","Details","Confirm","Payment"].map((l,i) => (
           <div key={l} style={{ flex: 1, textAlign: "center" }}>
             <div style={{ height: 3, borderRadius: 2, background: step > i ? "#C8553D" : "#eee", transition: "background 0.3s", marginBottom: 6 }}/>
             <span style={{ fontSize: 10, fontWeight: 600, color: step > i ? "#C8553D" : "#bbb", textTransform: "uppercase", letterSpacing: "0.08em" }}>{l}</span>
@@ -460,7 +531,7 @@ function BookingPanel({ bookings, onBookingComplete }) {
       </>}
 
       {step === 3 && <>
-        <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a", marginBottom: 14 }}>Review your booking</div>
+        <div style={{ fontSize: 15, fontWeight: 600, color: "#1a1a1a", marginBottom: 14 }}>Review & confirm your booking</div>
         <div style={{ background: "#FAFAF8", borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
           {[["Guest",guest.name],["Email",guest.email],["Phone",guest.phone],["Guests",`${guest.guests}`],
             ["Check-in",`${fmtDisplay(checkIn)} at ${CONFIG.checkInTime}`],["Check-out",`${fmtDisplay(checkOut)} at ${CONFIG.checkOutTime}`],
@@ -476,11 +547,51 @@ function BookingPanel({ bookings, onBookingComplete }) {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button onClick={() => { setError(""); setStep(2); }} style={secondaryBtn}>Back</button>
-          <button onClick={handlePay} disabled={processing}
+          <button onClick={handleConfirm} disabled={processing}
             style={{ ...primaryBtn, flex: 1, opacity: processing?0.6:1 }}>
-            {processing ? "Processing..." : `Pay ${fmtNaira(total)}`}
+            {processing ? "Confirming booking..." : "Confirm Booking"}
           </button>
         </div>
+        <p style={{ fontSize: 10, color: "#bbb", textAlign: "center", marginTop: 10 }}>Confirmation emails will be sent to you and the host</p>
+      </>}
+
+      {step === 4 && <>
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div style={{ width: 48, height: 48, borderRadius: "50%", background: "rgba(34,139,84,0.1)",
+            display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px", color: "#228B54" }}>
+            <Icon name="check" size={24}/></div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif" }}>Booking confirmed!</div>
+          <div style={{ fontSize: 13, color: "#888", marginTop: 4 }}>Reference: <strong style={{ color: "#1a1a1a" }}>{bookingRef}</strong></div>
+        </div>
+        {countdown > 0 && (
+          <div style={{ textAlign: "center", marginBottom: 14, padding: "10px 14px", background: countdown <= 120 ? "#FFF5F5" : "#FFFBF0",
+            border: `1px solid ${countdown <= 120 ? "#FED7D7" : "#FEEBC8"}`, borderRadius: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: countdown <= 120 ? "#C53030" : "#C05621", marginBottom: 2 }}>Time remaining to pay</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: countdown <= 120 ? "#C53030" : "#C05621", fontVariantNumeric: "tabular-nums" }}>
+              {String(Math.floor(countdown / 60)).padStart(2, "0")}:{String(countdown % 60).padStart(2, "0")}
+            </div>
+            <div style={{ fontSize: 10, color: countdown <= 120 ? "#E53E3E" : "#DD6B20", marginTop: 2 }}>
+              Booking will be automatically cancelled if payment is not received in time
+            </div>
+          </div>
+        )}
+        <div style={{ background: "#FAFAF8", borderRadius: 14, padding: "16px 18px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13, borderBottom: "1px solid #f0eeeb" }}>
+            <span style={{ color: "#999" }}>Check-in</span>
+            <span style={{ color: "#1a1a1a", fontWeight: 500 }}>{fmtDisplay(checkIn)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13, borderBottom: "1px solid #f0eeeb" }}>
+            <span style={{ color: "#999" }}>Check-out</span>
+            <span style={{ color: "#1a1a1a", fontWeight: 500 }}>{fmtDisplay(checkOut)}</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 10, marginTop: 6, fontSize: 16, fontWeight: 700, color: "#1a1a1a" }}>
+            <span>Amount due</span><span>{fmtNaira(total)}</span>
+          </div>
+        </div>
+        <button onClick={handlePay} disabled={processing}
+          style={{ ...primaryBtn, marginTop: 4, opacity: processing?0.6:1 }}>
+          {processing ? "Processing..." : `Pay ${fmtNaira(total)}`}
+        </button>
         <p style={{ fontSize: 10, color: "#bbb", textAlign: "center", marginTop: 10 }}>Secured by Flutterwave · Your payment details are encrypted</p>
       </>}
 
@@ -505,8 +616,16 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [confirmation, setConfirmation] = useState(null);
 
+  function handleBookingConfirmed(checkInDate, checkOutDate, ref) {
+    setBookings(prev => [...prev, { start: checkInDate, end: checkOutDate, ref, pending: true }]);
+  }
+
+  function handleBookingCancelled(ref) {
+    setBookings(prev => prev.filter(b => b.ref !== ref));
+  }
+
   function handleBookingComplete(booking) {
-    setBookings(prev => [...prev, { start: booking.checkInDate, end: booking.checkOutDate }]);
+    setBookings(prev => prev.map(b => b.ref === booking.reference ? { ...b, pending: false } : b));
     setConfirmation(booking);
   }
 
@@ -622,7 +741,8 @@ export default function App() {
           </div>
 
           <div style={{ position: "sticky", top: 72, animation: "fadeUp 0.5s ease 0.2s both" }}>
-            <BookingPanel bookings={bookings} onBookingComplete={handleBookingComplete}/>
+            <BookingPanel bookings={bookings} onBookingComplete={handleBookingComplete}
+              onBookingConfirmed={handleBookingConfirmed} onBookingCancelled={handleBookingCancelled}/>
           </div>
         </div>
       </main>
