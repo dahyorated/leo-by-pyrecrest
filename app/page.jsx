@@ -117,13 +117,17 @@ async function sendBookingEmail(booking) {
       check_in: booking.checkIn, check_out: booking.checkOut, nights: booking.nights,
       total: booking.totalAmount, reference: booking.reference, to_email: CONFIG.ownerEmail,
     };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         service_id: CONFIG.emailjs.serviceId, template_id: CONFIG.emailjs.templateId,
         user_id: CONFIG.emailjs.publicKey, template_params: params,
       }),
     });
+    clearTimeout(timeout);
     return res.ok;
   } catch (e) { console.error("Email failed:", e); return false; }
 }
@@ -136,13 +140,17 @@ async function sendCustomerEmail(booking) {
       total: booking.totalAmount, reference: booking.reference, to_email: booking.email,
       payment_url: CONFIG.paymentUrl,
     };
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
     const res = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
       method: "POST", headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         service_id: CONFIG.emailjs.serviceId, template_id: CONFIG.emailjs.customerTemplateId,
         user_id: CONFIG.emailjs.publicKey, template_params: params,
       }),
     });
+    clearTimeout(timeout);
     return res.ok;
   } catch (e) { console.error("Customer email failed:", e); return false; }
 }
@@ -415,15 +423,23 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
       checkInDate: fmt(checkIn), checkOutDate: fmt(checkOut),
       nights, totalAmount: total,
     };
-    const result = await onBookingConfirmed(fmt(checkIn), fmt(checkOut), ref);
-    if (result && result.error) {
-      setError(result.error);
+    try {
+      const result = await onBookingConfirmed(fmt(checkIn), fmt(checkOut), ref);
+      if (result && result.error) {
+        setError(result.error);
+        setProcessing(false);
+        setStep(1); setCheckIn(null); setCheckOut(null);
+        return;
+      }
+    } catch (e) {
+      console.error("Booking save failed:", e);
+      setError("Failed to save booking. Please try again.");
       setProcessing(false);
-      setStep(1); setCheckIn(null); setCheckOut(null);
       return;
     }
-    await sendBookingEmail(data);
-    await sendCustomerEmail(data);
+    // Send emails in background — don't block the booking flow
+    sendBookingEmail(data).catch((e) => console.error("Owner email failed:", e));
+    sendCustomerEmail(data).catch((e) => console.error("Customer email failed:", e));
     setProcessing(false);
     setStep(4);
     startCancelTimer(ref);
@@ -455,8 +471,8 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
         onclose: () => setProcessing(false),
       });
     } else {
-      // Demo mode
-      setTimeout(() => complete("DEMO-" + Date.now()), 1500);
+      setError("Payment system is not available. Please refresh the page and try again.");
+      setProcessing(false);
     }
   }
 
