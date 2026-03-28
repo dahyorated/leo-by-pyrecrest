@@ -27,7 +27,7 @@ const CONFIG = {
     publicKey: "spaPwEbKkXXRcHgvN",
   },
   whatsapp: "+2347034375774",
-  paymentUrl: "https://yourdomain.com",
+  paymentUrl: "https://leo.pyrecrest.com",
 };
 
 // Replace with your actual apartment photos
