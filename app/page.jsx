@@ -62,6 +62,18 @@ const HOUSE_RULES = [
 // ═══════════════════════════════════════════════════════════════
 // HELPERS
 // ═══════════════════════════════════════════════════════════════
+function useIsMobile(breakpoint = 768) {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    setMobile(mql.matches);
+    const handler = (e) => setMobile(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return mobile;
+}
+
 const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const fmtDisplay = (d) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 const fmtNaira = (n) => "\u20A6" + n.toLocaleString("en-NG");
@@ -635,6 +647,7 @@ const inputStyle = { width: "100%", padding: "12px 14px", border: "1px solid #ea
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function App() {
+  const mobile = useIsMobile();
   const [bookings, setBookings] = useState([]);
   const [confirmation, setConfirmation] = useState(null);
 
@@ -683,7 +696,7 @@ export default function App() {
 
       <ConfirmationModal booking={confirmation} onClose={() => setConfirmation(null)}/>
 
-      <header style={{ padding: "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
+      <header style={{ padding: mobile ? "12px 16px" : "14px 32px", display: "flex", alignItems: "center", justifyContent: "space-between",
         borderBottom: "1px solid #f0eeeb", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(16px)",
         position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -702,8 +715,8 @@ export default function App() {
         </a>
       </header>
 
-      <main style={{ maxWidth: 1120, margin: "0 auto", padding: "32px 24px 80px" }}>
-        <div style={{ marginBottom: 28, animation: "fadeUp 0.5s ease" }}>
+      <main style={{ maxWidth: 1120, margin: "0 auto", padding: mobile ? "20px 14px 60px" : "32px 24px 80px" }}>
+        <div style={{ marginBottom: mobile ? 20 : 28, animation: "fadeUp 0.5s ease" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
             {[[`map-pin`, CONFIG.location], ["bed", "1 Bedroom"]].map(([ic,l]) => (
               <div key={l} style={{ display: "flex", alignItems: "center", gap: 4, background: "rgba(200,85,61,0.08)",
@@ -712,17 +725,23 @@ export default function App() {
               </div>
             ))}
           </div>
-          <h1 style={{ fontSize: 44, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif",
+          <h1 style={{ fontSize: mobile ? 28 : 44, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif",
             letterSpacing: "-0.03em", lineHeight: 1.05, marginBottom: 10 }}>
             Leo <span style={{ color: "#C8553D" }}>by Pyrecrest</span>
           </h1>
-          <p style={{ fontSize: 16, color: "#888", lineHeight: 1.65, maxWidth: 600 }}>{CONFIG.tagline}</p>
+          <p style={{ fontSize: mobile ? 14 : 16, color: "#888", lineHeight: 1.65, maxWidth: 600 }}>{CONFIG.tagline}</p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) 400px", gap: 32, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "minmax(0,1fr) 400px", gap: mobile ? 20 : 32, alignItems: "start" }}>
+          {mobile && (
+            <div style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
+              <BookingPanel bookings={bookings} onBookingComplete={handleBookingComplete}
+                onBookingConfirmed={handleBookingConfirmed} onBookingCancelled={handleBookingCancelled}/>
+            </div>
+          )}
           <div style={{ animation: "fadeUp 0.5s ease 0.1s both" }}>
             <Gallery/>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginTop: 18 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: mobile ? 8 : 10, marginTop: mobile ? 14 : 18 }}>
               {[{ic:"bed",l:"1 Bedroom",s:"Queen-size bed"},{ic:"users",l:`Up to ${CONFIG.maxGuests}`,s:"Guests"},{ic:"star",l:"5.0 Rating",s:"Superhost"}].map(i => (
                 <div key={i.l} style={{ background: "#fff", borderRadius: 14, padding: "16px 18px", border: "1px solid #f0eeeb" }}>
                   <div style={{ color: "#C8553D", marginBottom: 8 }}><Icon name={i.ic} size={18}/></div>
@@ -732,8 +751,8 @@ export default function App() {
               ))}
             </div>
 
-            <section style={{ marginTop: 24, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: 28 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>About this space</h2>
+            <section style={{ marginTop: mobile ? 16 : 24, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28 }}>
+              <h2 style={{ fontSize: mobile ? 18 : 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>About this space</h2>
               <p style={{ fontSize: 14, color: "#666", lineHeight: 1.85 }}>
                 Welcome to Leo by Pyrecrest — a thoughtfully designed 1-bedroom apartment in Somolu, Lagos.
                 Whether you're visiting for business or leisure, this space offers everything you need for a comfortable stay.
@@ -742,9 +761,9 @@ export default function App() {
               </p>
             </section>
 
-            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: 28 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 16 }}>What this place offers</h2>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28 }}>
+              <h2 style={{ fontSize: mobile ? 18 : 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 16 }}>What this place offers</h2>
+              <div style={{ display: "grid", gridTemplateColumns: mobile ? "1fr" : "1fr 1fr", gap: 10 }}>
                 {AMENITIES.map(a => (
                   <div key={a.label} style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", background: "#FAFAF8", borderRadius: 12 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(200,85,61,0.07)",
@@ -759,8 +778,8 @@ export default function App() {
               </div>
             </section>
 
-            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: 28 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 16 }}>House rules</h2>
+            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28 }}>
+              <h2 style={{ fontSize: mobile ? 18 : 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 16 }}>House rules</h2>
               <div style={{ display: "grid", gap: 8 }}>
                 {HOUSE_RULES.map(r => (
                   <div key={r} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13, color: "#555" }}>
@@ -770,8 +789,8 @@ export default function App() {
               </div>
             </section>
 
-            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: 28 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>Location</h2>
+            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28 }}>
+              <h2 style={{ fontSize: mobile ? 18 : 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>Location</h2>
               <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, color: "#666" }}>
                 <Icon name="map-pin" size={16}/> Somolu, Lagos, Nigeria
               </div>
@@ -780,8 +799,8 @@ export default function App() {
               </p>
             </section>
 
-            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: 28, marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>Cancellation policy</h2>
+            <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28, marginBottom: 20 }}>
+              <h2 style={{ fontSize: mobile ? 18 : 20, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif", marginBottom: 14 }}>Cancellation policy</h2>
               <p style={{ fontSize: 13, color: "#666", lineHeight: 1.7 }}>
                 Free cancellation up to 48 hours before check-in for a full refund. Cancellations within 48 hours are eligible for a 50% refund.
                 No refund for no-shows. The caution deposit of {fmtNaira(CONFIG.cautionDeposit)} is fully refundable upon checkout if no damages are found.
@@ -789,15 +808,18 @@ export default function App() {
             </section>
           </div>
 
-          <div style={{ position: "sticky", top: 72, animation: "fadeUp 0.5s ease 0.2s both" }}>
-            <BookingPanel bookings={bookings} onBookingComplete={handleBookingComplete}
-              onBookingConfirmed={handleBookingConfirmed} onBookingCancelled={handleBookingCancelled}/>
-          </div>
+          {!mobile && (
+            <div style={{ position: "sticky", top: 72, animation: "fadeUp 0.5s ease 0.2s both" }}>
+              <BookingPanel bookings={bookings} onBookingComplete={handleBookingComplete}
+                onBookingConfirmed={handleBookingConfirmed} onBookingCancelled={handleBookingCancelled}/>
+            </div>
+          )}
         </div>
       </main>
 
-      <footer style={{ borderTop: "1px solid #f0eeeb", padding: "28px 32px", background: "#fff" }}>
-        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+      <footer style={{ borderTop: "1px solid #f0eeeb", padding: mobile ? "20px 16px" : "28px 32px", background: "#fff" }}>
+        <div style={{ maxWidth: 1120, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12,
+          ...(mobile ? { flexDirection: "column", textAlign: "center" } : {}) }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif" }}>
               Leo <span style={{ color: "#C8553D" }}>by Pyrecrest</span></div>
