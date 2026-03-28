@@ -26,7 +26,7 @@ const CONFIG = {
     customerTemplateId: "template_ri54zjb",
     publicKey: "spaPwEbKkXXRcHgvN",
   },
-  whatsapp: "+2348000000000",
+  whatsapp: "+2347034375774",
   paymentUrl: "https://yourdomain.com",
 };
 
@@ -700,9 +700,7 @@ export default function App() {
         borderBottom: "1px solid #f0eeeb", background: "rgba(250,250,248,0.92)", backdropFilter: "blur(16px)",
         position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 38, height: 38, borderRadius: 10, background: "linear-gradient(135deg,#C8553D,#A33B28)",
-            display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 17,
-            fontFamily: "'Playfair Display',serif" }}>L</div>
+          <img src="/logo.png" alt="Pyrecrest logo" style={{ width: 38, height: 38, borderRadius: 10, objectFit: "cover" }} />
           <div>
             <div style={{ fontSize: 16, fontWeight: 700, color: "#1a1a1a", letterSpacing: "-0.03em", lineHeight: 1.2 }}>Leo</div>
             <div style={{ fontSize: 9, fontWeight: 600, color: "#aaa", textTransform: "uppercase", letterSpacing: "0.14em" }}>by Pyrecrest</div>
