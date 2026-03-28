@@ -9,7 +9,7 @@ const CONFIG = {
   tagline: "A stylish 1-bedroom apartment in the heart of Somolu, Lagos — perfect for short stays, business trips, and getaways.",
   location: "Somolu, Lagos",
   nightlyRate: 60000,
-  cleaningFee: 10000,
+  vatRate: 0.075,
   cautionDeposit: 20000,
   maxGuests: 3,
   checkInTime: "2:00 PM",
@@ -377,6 +377,7 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
     if (selecting === "checkin") { setCheckIn(date); setCheckOut(null); setSelecting("checkout"); }
     else {
       if (date <= checkIn) { setError("Check-out must be after check-in"); return; }
+      if (diffDays(checkIn, date) < 2) { setError("Minimum stay is 2 nights"); return; }
       if (rangeOverlaps(checkIn, date, bookings)) { setError("Selected range includes booked dates."); return; }
       setCheckOut(date); setSelecting("checkin");
     }
@@ -384,7 +385,11 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
 
   const nights = checkIn && checkOut ? diffDays(checkIn, checkOut) : 0;
   const subtotal = nights * CONFIG.nightlyRate;
-  const total = subtotal + CONFIG.cleaningFee + CONFIG.cautionDeposit;
+  const vatPerNight = Math.round(CONFIG.nightlyRate - CONFIG.nightlyRate / (1 + CONFIG.vatRate));
+  const basePerNight = CONFIG.nightlyRate - vatPerNight;
+  const baseTotal = nights * basePerNight;
+  const vatTotal = nights * vatPerNight;
+  const total = subtotal + CONFIG.cautionDeposit;
 
   function goToDetails() {
     if (!checkIn || !checkOut) { setError("Please select check-in and check-out dates"); return; }
@@ -494,9 +499,10 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
         <span style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.nightlyRate)}</span>
         <span style={{ fontSize: 14, color: "#999" }}>/ night</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 22, fontSize: 13, color: "#C8553D" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, fontSize: 13, color: "#C8553D" }}>
         {[...Array(5)].map((_,i) => <Icon key={i} name="star" size={13}/>)} <span style={{ color: "#888", marginLeft: 4 }}>5.0</span>
       </div>
+      <div style={{ fontSize: 12, color: "#999", marginBottom: 22 }}>Minimum stay: 2 nights</div>
 
       {/* Step bar */}
       <div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
@@ -526,10 +532,10 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
         {nights > 0 && (
           <div style={{ marginTop: 16, padding: "14px 16px", background: "#FAFAF8", borderRadius: 12, fontSize: 13 }}>
             <div style={{ display: "flex", justifyContent: "space-between", color: "#666", marginBottom: 4 }}>
-              <span>{fmtNaira(CONFIG.nightlyRate)} x {nights} night{nights>1?"s":""}</span><span>{fmtNaira(subtotal)}</span>
+              <span>{fmtNaira(basePerNight)} x {nights} night{nights>1?"s":""}</span><span>{fmtNaira(baseTotal)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", color: "#666", marginBottom: 4 }}>
-              <span>Cleaning fee</span><span>{fmtNaira(CONFIG.cleaningFee)}</span>
+              <span>VAT (7.5% incl.)</span><span>{fmtNaira(vatTotal)}</span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", color: "#666", marginBottom: 8 }}>
               <span>Caution deposit (refundable)</span><span>{fmtNaira(CONFIG.cautionDeposit)}</span>
