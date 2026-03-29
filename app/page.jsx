@@ -8,21 +8,21 @@ const CONFIG = {
   name: "Leo by Pyrecrest",
   tagline: "A stylish 1-bedroom apartment in the heart of Somolu, Lagos — perfect for short stays, business trips, and getaways.",
   location: "Somolu, Lagos",
-  nightlyRate: 60000,
+  nightlyRate: 100,
   vatRate: 0.075,
-  cautionDeposit: 20000,
+  cautionDeposit: 50,
   maxGuests: 3,
   checkInTime: "2:00 PM",
   checkOutTime: "12:00 PM",
   // Replace with your actual Flutterwave public key
-  flutterwaveKey: "FLWPUBK-xxxxxxxxxxxxxxxxxxxxx-X",
+  flutterwaveKey: process.env.NEXT_PUBLIC_FLUTTERWAVE_KEY,
   // Replace with your owner email for notifications
   ownerEmail: "pyrecrestng@gmail.com",
   // Replace with your EmailJS credentials for email notifications
   // Sign up at https://www.emailjs.com (free tier: 200 emails/month)
   emailjs: {
     serviceId: "service_sm0402u",
-    templateId: "template_bpowk6x",
+    ownerTemplateId: "template_bpowk6x",
     customerTemplateId: "template_ri54zjb",
     publicKey: "spaPwEbKkXXRcHgvN",
   },
@@ -122,12 +122,13 @@ function Icon({ name, size = 20 }) {
 // ═══════════════════════════════════════════════════════════════
 // EMAIL SERVICE (using EmailJS)
 // ═══════════════════════════════════════════════════════════════
-async function sendBookingEmail(booking) {
+async function sendPaymentConfirmationEmail(booking) {
   try {
     const params = {
       guest_name: booking.name, guest_email: booking.email, guest_phone: booking.phone,
       check_in: booking.checkIn, check_out: booking.checkOut, nights: booking.nights,
       total: booking.totalAmount, reference: booking.reference, to_email: CONFIG.ownerEmail,
+      transaction_id: booking.transactionId,
     };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -135,22 +136,22 @@ async function sendBookingEmail(booking) {
       method: "POST", headers: { "Content-Type": "application/json" },
       signal: controller.signal,
       body: JSON.stringify({
-        service_id: CONFIG.emailjs.serviceId, template_id: CONFIG.emailjs.templateId,
+        service_id: CONFIG.emailjs.serviceId, template_id: CONFIG.emailjs.ownerTemplateId,
         user_id: CONFIG.emailjs.publicKey, template_params: params,
       }),
     });
     clearTimeout(timeout);
     return res.ok;
-  } catch (e) { console.error("Email failed:", e); return false; }
+  } catch (e) { console.error("Payment confirmation email failed:", e); return false; }
 }
 
-async function sendCustomerEmail(booking) {
+async function sendCustomerPaymentEmail(booking) {
   try {
     const params = {
       guest_name: booking.name, guest_email: booking.email, guest_phone: booking.phone,
       check_in: booking.checkIn, check_out: booking.checkOut, nights: booking.nights,
       total: booking.totalAmount, reference: booking.reference, to_email: booking.email,
-      payment_url: CONFIG.paymentUrl,
+      transaction_id: booking.transactionId,
     };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
@@ -164,7 +165,7 @@ async function sendCustomerEmail(booking) {
     });
     clearTimeout(timeout);
     return res.ok;
-  } catch (e) { console.error("Customer email failed:", e); return false; }
+  } catch (e) { console.error("Customer payment email failed:", e); return false; }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -454,9 +455,6 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
       setProcessing(false);
       return;
     }
-    // Send emails in background — don't block the booking flow
-    sendBookingEmail(data).catch((e) => console.error("Owner email failed:", e));
-    sendCustomerEmail(data).catch((e) => console.error("Customer email failed:", e));
     setProcessing(false);
     setStep(4);
     startCancelTimer(ref);
@@ -695,6 +693,9 @@ export default function App() {
     }).catch(() => {});
     setBookings(prev => prev.map(b => b.ref === booking.reference ? { ...b, pending: false } : b));
     setConfirmation(booking);
+    // Send payment confirmation emails to customer and owner
+    sendPaymentConfirmationEmail(booking).catch((e) => console.error("Owner payment email failed:", e));
+    sendCustomerPaymentEmail(booking).catch((e) => console.error("Customer payment email failed:", e));
   }
 
   return (
