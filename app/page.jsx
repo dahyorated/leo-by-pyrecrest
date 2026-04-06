@@ -810,6 +810,24 @@ export default function App() {
               <p style={{ fontSize: 13, color: "#999", marginTop: 8, lineHeight: 1.7 }}>
                 Centrally located in Somolu with easy access to Yaba, Gbagada, and the Lagos mainland. Close to restaurants, supermarkets, and public transport.
               </p>
+              <a href="https://maps.app.goo.gl/5FcZY8CdSwHj3rKMA" target="_blank" rel="noopener noreferrer"
+                style={{ display: "block", marginTop: 16, borderRadius: 14, overflow: "hidden", border: "1px solid #f0eeeb", position: "relative", textDecoration: "none" }}>
+                <iframe
+                  src="https://www.google.com/maps?q=Leo+by+Pyrecrest+Somolu+Lagos&output=embed"
+                  width="100%"
+                  height={mobile ? 220 : 280}
+                  style={{ border: 0, display: "block", pointerEvents: "none" }}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  title="Leo by Pyrecrest location"
+                />
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "#fff", borderTop: "1px solid #f0eeeb" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#1a1a1a", fontWeight: 500 }}>
+                    <Icon name="map-pin" size={14}/> View on Google Maps
+                  </span>
+                  <span style={{ fontSize: 12, color: "#C8553D", fontWeight: 600 }}>Open →</span>
+                </div>
+              </a>
             </section>
 
             <section style={{ marginTop: 16, background: "#fff", borderRadius: 18, border: "1px solid #f0eeeb", padding: mobile ? 20 : 28, marginBottom: 20 }}>
