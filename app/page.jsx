@@ -202,7 +202,7 @@ function Gallery() {
       <div style={{ position: "relative", width: "100%", aspectRatio: "4/5", maxHeight: "80vh", borderRadius: 18, overflow: "hidden", background: "#111", cursor: "pointer" }}
         onClick={() => setLightbox(true)}>
         <img src={IMAGES[idx].src} alt={IMAGES[idx].alt}
-          style={{ width: "100%", height: "100%", objectFit: "contain", transition: "opacity 0.35s", opacity: fade ? 1 : 0 }} />
+          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.35s", opacity: fade ? 1 : 0 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.45) 0%,transparent 35%)" }} />
         <button onClick={e => { e.stopPropagation(); prev(); }} style={nb("left")}>
           <span style={{ transform: "rotate(180deg)", display: "flex" }}><Icon name="chevron" size={18}/></span>
