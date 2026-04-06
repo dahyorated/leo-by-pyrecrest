@@ -8,7 +8,8 @@ const CONFIG = {
   name: "Leo by Pyrecrest",
   tagline: "A stylish 1-bedroom apartment in the heart of Somolu, Lagos — perfect for short stays, business trips, and getaways.",
   location: "Somolu, Lagos",
-  nightlyRate: 60000,
+  nightlyRate: 50000,
+  originalRate: 60000,
   vatRate: 0.075,
   cautionDeposit: 20000,
   maxGuests: 3,
@@ -32,11 +33,13 @@ const CONFIG = {
 
 // Replace with your actual apartment photos
 const IMAGES = [
-  { src: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&h=500&fit=crop", alt: "Living area" },
-  { src: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&h=500&fit=crop", alt: "Bedroom" },
-  { src: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&h=500&fit=crop", alt: "Kitchen" },
-  { src: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&h=500&fit=crop", alt: "Bathroom" },
-  { src: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=800&h=500&fit=crop", alt: "View" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1855.png", alt: "Apartment view 1" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1851.png", alt: "Apartment view 2" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1852.png", alt: "Apartment view 3" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1853.png", alt: "Apartment view 4" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1856.png", alt: "Apartment view 5" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1858.png", alt: "Apartment view 6" },
+  { src: "https://pyrecreststorage.blob.core.windows.net/leo/IMG_1859.png", alt: "Apartment view 7" },
 ];
 
 const AMENITIES = [
@@ -196,10 +199,10 @@ function Gallery() {
 
   return (
     <>
-      <div style={{ position: "relative", width: "100%", aspectRatio: "16/9", borderRadius: 18, overflow: "hidden", background: "#111", cursor: "pointer" }}
+      <div style={{ position: "relative", width: "100%", aspectRatio: "4/5", maxHeight: "80vh", borderRadius: 18, overflow: "hidden", background: "#111", cursor: "pointer" }}
         onClick={() => setLightbox(true)}>
         <img src={IMAGES[idx].src} alt={IMAGES[idx].alt}
-          style={{ width: "100%", height: "100%", objectFit: "cover", transition: "opacity 0.35s", opacity: fade ? 1 : 0 }} />
+          style={{ width: "100%", height: "100%", objectFit: "contain", transition: "opacity 0.35s", opacity: fade ? 1 : 0 }} />
         <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to top,rgba(0,0,0,0.45) 0%,transparent 35%)" }} />
         <button onClick={e => { e.stopPropagation(); prev(); }} style={nb("left")}>
           <span style={{ transform: "rotate(180deg)", display: "flex" }}><Icon name="chevron" size={18}/></span>
@@ -220,7 +223,7 @@ function Gallery() {
       <div style={{ display: "flex", gap: 8, marginTop: 10, overflowX: "auto" }}>
         {IMAGES.map((img, i) => (
           <button key={i} onClick={() => goTo(i)}
-            style={{ width: 72, height: 48, borderRadius: 10, overflow: "hidden",
+            style={{ width: 54, height: 72, borderRadius: 10, overflow: "hidden",
               border: i === idx ? "2px solid #C8553D" : "2px solid transparent",
               cursor: "pointer", flexShrink: 0, padding: 0, background: "none", opacity: i === idx ? 1 : 0.6 }}>
             <img src={img.src} alt={img.alt} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
@@ -493,9 +496,13 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
 
   return (
     <div style={{ background: "#fff", borderRadius: 22, border: "1px solid #eee", padding: 28, boxShadow: "0 8px 40px rgba(0,0,0,0.06)" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
-        <span style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.nightlyRate)}</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+        <span style={{ fontSize: 18, color: "#999", textDecoration: "line-through", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.originalRate)}</span>
+        <span style={{ fontSize: 28, fontWeight: 700, color: "#C8553D", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.nightlyRate)}</span>
         <span style={{ fontSize: 14, color: "#999" }}>/ night</span>
+      </div>
+      <div style={{ display: "inline-block", background: "#FFF3EE", color: "#C8553D", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, marginBottom: 6, letterSpacing: 0.3 }}>
+        PROMO · ENDS MAY 31
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, fontSize: 13, color: "#C8553D" }}>
         {[...Array(5)].map((_,i) => <Icon key={i} name="star" size={13}/>)} <span style={{ color: "#888", marginLeft: 4 }}>5.0</span>
