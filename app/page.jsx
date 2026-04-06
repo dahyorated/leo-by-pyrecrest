@@ -28,7 +28,7 @@ const CONFIG = {
     customerTemplateId: "template_ri54zjb",
     publicKey: "spaPwEbKkXXRcHgvN",
   },
-  whatsapp: "+2347034375774",
+  whatsapp: "+2348026813305",
   paymentUrl: "https://leo.pyrecrest.com",
 };
 
