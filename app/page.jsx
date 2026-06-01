@@ -9,8 +9,7 @@ const CONFIG = {
   name: "Leo by Pyrecrest",
   tagline: "A stylish 1-bedroom apartment in the heart of Somolu, Lagos — perfect for short stays, business trips, and getaways.",
   location: "Somolu, Lagos",
-  nightlyRate: 50000,
-  originalRate: 60000,
+  nightlyRate: 65000,
   vatRate: 0.075,
   cautionDeposit: 20000,
   maxGuests: 3,
@@ -497,13 +496,9 @@ function BookingPanel({ bookings, onBookingComplete, onBookingConfirmed, onBooki
 
   return (
     <div style={{ background: "#fff", borderRadius: 22, border: "1px solid #eee", padding: 28, boxShadow: "0 8px 40px rgba(0,0,0,0.06)" }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-        <span style={{ fontSize: 18, color: "#999", textDecoration: "line-through", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.originalRate)}</span>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
         <span style={{ fontSize: 28, fontWeight: 700, color: "#C8553D", fontFamily: "'Playfair Display',serif" }}>{fmtNaira(CONFIG.nightlyRate)}</span>
         <span style={{ fontSize: 14, color: "#999" }}>/ night</span>
-      </div>
-      <div style={{ display: "inline-block", background: "#FFF3EE", color: "#C8553D", fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 6, marginBottom: 6, letterSpacing: 0.3 }}>
-        PROMO · ENDS MAY 31
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 6, fontSize: 13, color: "#C8553D" }}>
         {[...Array(5)].map((_,i) => <Icon key={i} name="star" size={13}/>)} <span style={{ color: "#888", marginLeft: 4 }}>5.0</span>
